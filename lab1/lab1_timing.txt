@@ -1,0 +1,9 @@
+1. Array multiplication:
+c: 1252.17 us
+asm: 1252.00 us - 0.014% faster than c
+dsp: 730.67 us - 71.37% faster than c - 71.35% faster than asm
+
+2. St. dev:
+c: 2125.67 us
+asm: 1757.42 us - 20.95% faster than c
+dsp: 532.83 us - 298.94% faster than c - 229.83% faster than asm

@@ -1,0 +1,181 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000                 AREA             test, CODE, READONLY
+    2 00000000         
+    3 00000000                 export           asm_stdev   ; label must be exp
+                                                            orted if it is to b
+                                                            e used as a functio
+                                                            n in C
+    4 00000000         asm_stdev
+    5 00000000 B408            PUSH{R3}                     ; saving context ac
+                                                            cording to calling 
+                                                            convention
+    6 00000002 F04F 0300       MOV              R3, #0      ; R3 temporarily st
+                                                            ores value 0
+    7 00000006 EE00 3A10       VMOV.f32         S0, R3      ; Assign value 0 to
+                                                             register S0 (S0 is
+                                                             used to store the 
+                                                            mean)
+    8 0000000A EEB8 0AC0       VCVT.f32.s32     S0, S0      ; Convert from sign
+                                                            ed int to 32-bit fl
+                                                            oat
+    9 0000000E B402            PUSH{R1}                     ; backup size of ar
+                                                            ray
+   10 00000010         
+   11 00000010         loop1
+   12 00000010 1E49            SUBS             R1, R1, #1  ; loop counter (N =
+                                                             N-1)
+   13 00000012 DB06            BLT              mean        ; loop has finished
+                                                            ?
+   14 00000014 EB00 0381       ADD              R3, R0, R1, LSL #2 ; creating b
+                                                            ase address for the
+                                                             next element in ar
+                                                            ray
+   15 00000018 EDD3 0A00       VLDR.f32         S1, [R3]    ; load element from
+                                                             array into S1
+   16 0000001C EE30 0A80       VADD.f32         S0, S1, S0  ; compute sum which
+                                                             will be divided by
+                                                             N later
+   17 00000020 E7F6            B                loop1
+   18 00000022         
+   19 00000022         mean
+   20 00000022 BC02            POP{R1}                      ; restore size of a
+                                                            rray
+   21 00000024 EE01 1A90       VMOV.f32         S3, R1      ; Move N to S3 temp
+                                                            orarily to convert 
+                                                            from int to float
+   22 00000028 EEF8 1AE1       VCVT.f32.s32     S3, S3      ; Convert from sign
+                                                            ed int to 32-bit fl
+                                                            oat
+   23 0000002C EE80 0A21       VDIV.f32         S0, S0, S3  ; mean = total_sum 
+                                                            / N
+   24 00000030 B402            PUSH{R1}                     ; backup size of ar
+                                                            ray
+   25 00000032 F04F 0300       MOV              R3, #0      ; R3 temporarily st
+                                                            ores value 0
+   26 00000036 EE01 3A10       VMOV.f32         S2, R3      ; Assign value 0 to
+                                                             register S2 (S2 is
+                                                             used to store the 
+                                                            numerator of stdev 
+                                                            formula)
+   27 0000003A EEB8 1AC1       VCVT.f32.s32     S2, S2      ; Convert from sign
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+                                                            ed int to 32-bit fl
+                                                            oat
+   28 0000003E         
+   29 0000003E         loop2
+   30 0000003E 1E49            SUBS             R1, R1, #1  ; loop counter (N =
+                                                             N-1)
+   31 00000040 DB08            BLT              done        ; loop has finished
+                                                            ?
+   32 00000042 EB00 0381       ADD              R3, R0, R1, LSL #2 ; creating b
+                                                            ase address for the
+                                                             next element in ar
+                                                            ray
+   33 00000046 EDD3 0A00       VLDR.f32         S1, [R3]    ; load element from
+                                                             array into S1
+   34 0000004A EE70 1AC0       VSUB.f32         S3, S1, S0  ; register S3 will 
+                                                            hold the value: A(i
+                                                            ) - mean
+   35 0000004E EE01 1AA1       VMLA.f32         S2, S3, S3  ; {multiply-accumul
+                                                            ate: (A(i)-mean)^2}
+                                                             into S2 (numerator
+                                                            )
+   36 00000052 E7F4            B                loop2
+   37 00000054         
+   38 00000054         done
+   39 00000054 BC02            POP{R1}                      ; restore size of a
+                                                            rray
+   40 00000056 1E49            SUBS             R1, R1, #1  ; subtract 1 becaus
+                                                            e we need N-1
+   41 00000058 EE01 1A90       VMOV.f32         S3, R1      ; Move N-1 to S3 te
+                                                            mporarily to conver
+                                                            t from int to float
+                                                            
+   42 0000005C EEF8 1AE1       VCVT.f32.s32     S3, S3      ; Convert from sign
+                                                            ed int to 32-bit fl
+                                                            oat
+   43 00000060 EE81 1A21       VDIV.f32         S2, S2, S3  ; store (numerator/
+                                                            N-1) back into S2
+   44 00000064 EEB1 1AC1       VSQRT.f32        S2, S2      ; square root
+   45 00000068 ED82 1A00       VSTR.f32         S2, [R2]    ; store the stdev i
+                                                            nto the res pointer
+                                                             stored in R2
+   46 0000006C         
+   47 0000006C BC08            POP{R3}                      ; restore context
+   48 0000006E 4770            BX               LR          ; return
+   49 00000070         
+   50 00000070                 END
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp.sp --apcs=
+interwork --depend=.\objects\asm_stdev.d -o.\objects\asm_stdev.o -I.\RTE\_G15_L
+ab1 -IC:\Users\nicob\AppData\Local\Arm\Packs\ARM\CMSIS\5.6.0\CMSIS\Core\Include
+ -IC:\Users\nicob\AppData\Local\Arm\Packs\ARM\CMSIS\5.6.0\CMSIS\DSP\Include -IC
+:\Users\nicob\AppData\Local\Arm\Packs\ARM\CMSIS\5.6.0\Device\ARM\ARMCM4\Include
+ --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 529" --predefi
+ne="_RTE_ SETA 1" --predefine="ARMCM4_FP SETA 1" --list=.\listings\asm_stdev.ls
+t asm\asm_stdev.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+asm_stdev 00000000
+
+Symbol: asm_stdev
+   Definitions
+      At line 4 in file asm\asm_stdev.s
+   Uses
+      At line 3 in file asm\asm_stdev.s
+Comment: asm_stdev used once
+done 00000054
+
+Symbol: done
+   Definitions
+      At line 38 in file asm\asm_stdev.s
+   Uses
+      At line 31 in file asm\asm_stdev.s
+Comment: done used once
+loop1 00000010
+
+Symbol: loop1
+   Definitions
+      At line 11 in file asm\asm_stdev.s
+   Uses
+      At line 17 in file asm\asm_stdev.s
+Comment: loop1 used once
+loop2 0000003E
+
+Symbol: loop2
+   Definitions
+      At line 29 in file asm\asm_stdev.s
+   Uses
+      At line 36 in file asm\asm_stdev.s
+Comment: loop2 used once
+mean 00000022
+
+Symbol: mean
+   Definitions
+      At line 19 in file asm\asm_stdev.s
+   Uses
+      At line 13 in file asm\asm_stdev.s
+Comment: mean used once
+test 00000000
+
+Symbol: test
+   Definitions
+      At line 1 in file asm\asm_stdev.s
+   Uses
+      None
+Comment: test unused
+6 symbols
+341 symbols in table

@@ -1,0 +1,99 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000                 AREA             test, CODE, READONLY
+    2 00000000         
+    3 00000000                 export           asm_mult_array ; label must be 
+                                                            exported if it is t
+                                                            o be used as a func
+                                                            tion in C
+    4 00000000         asm_mult_array
+    5 00000000 B470            PUSH{R4,         R5, R6}     ; saving context ac
+                                                            cording to calling 
+                                                            convention 
+    6 00000002         
+    7 00000002         loop
+    8 00000002 1E5B            SUBS             R3, R3, #1  ; loop counter (N =
+                                                             N-1)
+    9 00000004 DB0E            BLT              done        ; loop has finished
+                                                            ?
+   10 00000006 EB00 0483       ADD              R4, R0, R3, LSL #2 ; creating b
+                                                            ase address for the
+                                                             next element in ar
+                                                            ray_a
+   11 0000000A EB01 0583       ADD              R5, R1, R3, LSL #2 ; creating b
+                                                            ase address for the
+                                                             next element in ar
+                                                            ray_b
+   12 0000000E EB02 0683       ADD              R6, R2, R3, LSL #2 ; creating b
+                                                            ase address for the
+                                                             next element in ar
+                                                            ray_res
+   13 00000012 ED94 0A00       VLDR.f32         S0, [R4]    ; load element from
+                                                             array_a into S0
+   14 00000016 EDD5 0A00       VLDR.f32         S1, [R5]    ; load element from
+                                                             array_b into S1
+   15 0000001A EE20 1A20       VMUL.f32         S2, S0, S1  ; multiply elements
+                                                             from array_a and a
+                                                            rray_b
+   16 0000001E ED86 1A00       VSTR.f32         S2, [R6]    ; store the mult re
+                                                            sult in the pointer
+                                                             to array_res
+   17 00000022 E7EE            B                loop
+   18 00000024         
+   19 00000024         done
+   20 00000024 BC70            POP{R4,          R5, R6}     ; restore context
+   21 00000026 4770            BX               LR          ; return
+   22 00000028         
+   23 00000028                 END
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp.sp --apcs=
+interwork --depend=.\objects\asm_mult_array.d -o.\objects\asm_mult_array.o -I.\
+RTE\_G15_Lab1 -IC:\Users\nicob\AppData\Local\Arm\Packs\ARM\CMSIS\5.6.0\CMSIS\Co
+re\Include -IC:\Users\nicob\AppData\Local\Arm\Packs\ARM\CMSIS\5.6.0\CMSIS\DSP\I
+nclude -IC:\Users\nicob\AppData\Local\Arm\Packs\ARM\CMSIS\5.6.0\Device\ARM\ARMC
+M4\Include --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 529"
+ --predefine="_RTE_ SETA 1" --predefine="ARMCM4_FP SETA 1" --list=.\listings\as
+m_mult_array.lst asm\asm_mult_array.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+asm_mult_array 00000000
+
+Symbol: asm_mult_array
+   Definitions
+      At line 4 in file asm\asm_mult_array.s
+   Uses
+      At line 3 in file asm\asm_mult_array.s
+Comment: asm_mult_array used once
+done 00000024
+
+Symbol: done
+   Definitions
+      At line 19 in file asm\asm_mult_array.s
+   Uses
+      At line 9 in file asm\asm_mult_array.s
+Comment: done used once
+loop 00000002
+
+Symbol: loop
+   Definitions
+      At line 7 in file asm\asm_mult_array.s
+   Uses
+      At line 17 in file asm\asm_mult_array.s
+Comment: loop used once
+test 00000000
+
+Symbol: test
+   Definitions
+      At line 1 in file asm\asm_mult_array.s
+   Uses
+      None
+Comment: test unused
+4 symbols
+339 symbols in table
