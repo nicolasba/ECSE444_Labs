@@ -5,15 +5,12 @@ ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_tx;
 
+int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len);
 void SystemClock_Config(void);
+static void MX_ADC_Init(void);
+static void MX_ADC_Calib(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
-
-int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len) {
-		if (HAL_UART_Transmit(huart1, (uint8_t *)&string[0], len, 30000) == HAL_OK)
-			return 1;	
-		return 0;
-}
 
 int main(void)
 {
@@ -36,6 +33,55 @@ int main(void)
 		UART_Print_String(&huart1, ch, 5);
   }
 }
+
+/* Transmit string through UART */
+int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len) {
+		if (HAL_UART_Transmit(huart1, (uint8_t *)&string[0], len, 30000) == HAL_OK)
+			return 1;	
+		return 0;
+}
+
+/* ADC init function (following configuration from Tutorial 4)*/
+void MX_ADC_Init(void) {
+	
+	ADC_ChannelConfTypeDef chConfig;
+	
+	__HAL_RCC_ADC_CLK_ENABLE();
+	
+	hadc1.Instance = ADC1;
+	
+	hadc1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
+	hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+	hadc1.Init.ScanConvMode = DISABLE;
+	hadc1.Init.ContinuousConvMode = ENABLE;
+	hadc1.Init.DiscontinuousConvMode = DISABLE;
+	hadc1.Init.NbrOfDiscConversion = 0;
+	hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+	hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_CC1;
+	hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+	hadc1.Init.NbrOfConversion = 1;
+	hadc1.Init.DMAContinuousRequests = ENABLE;
+	hadc1.Init.EOCSelection = DISABLE;
+	
+	if (HAL_ADC_Init(&hadc1) != HAL_OK)
+	{
+		 _Error_Handler(__FILE__, __LINE__);
+	}
+	
+	chConfig.Channel = ADC_CHANNEL_TEMPSENSOR;				//From MCU datasheet p.36 and ref. manual p.580, temp. sensor is internally 
+																										//connected to channel 17. Only available on ADC1 and ADC3 instances
+	chConfig.Rank = 1;
+	chConfig.SamplingTime = ADC_SAMPLETIME_24CYCLES_5;
+	chConfig.Offset = 0;
+	
+	if (HAL_ADC_ConfigChannel(&hadc1, &chConfig) != HAL_OK)
+	{
+		 _Error_Handler(__FILE__, __LINE__);
+	}
+
+}
+
+
 
 void SystemClock_Config(void)
 {
