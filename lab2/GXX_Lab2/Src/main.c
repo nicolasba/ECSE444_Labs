@@ -1,5 +1,7 @@
 #include "main.h"
 #include "stm32l4xx_hal.h"
+//#include <arm_math.h>
+#include <math.h>
 
 /* Private variables ---------------------------------------------------------*/
 DAC_HandleTypeDef hdac1;
@@ -12,6 +14,7 @@ static void MX_DAC1_Init(void);
 
 
 int main(void)
+
 {
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -27,10 +30,44 @@ int main(void)
 	/* Turn on LED */
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET  );
 	
+
+	HAL_DAC_Start(&hdac1,DAC_CHANNEL_1);
+	HAL_DAC_Start(&hdac1,DAC_CHANNEL_2);
+	
+	int i =0;
+
   /* Infinite loop */
   while (1)
   {
 		//********** Student code here *************//
+		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) ==GPIO_PIN_RESET){
+			
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET  );
+			
+			
+		}else
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET  );
+		
+		
+		
+		/*if(i==0){
+			HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_1,DAC_ALIGN_8B_R,0);
+			HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_2,DAC_ALIGN_8B_R,0);
+		}
+		else if(i==50000){
+			
+			HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_1,DAC_ALIGN_8B_R,255);
+			HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_2,DAC_ALIGN_8B_R,255);
+		}*/
+		
+		float value =sin(i*2*3.1415/100.0)*127+127;
+		HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_1,DAC_ALIGN_8B_R,value);
+		HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_2,DAC_ALIGN_8B_R,value);
+		i++;
+		
+		if(i>100)
+			i=0;
+		//arm_sin_f32(i*2*M_PI/100000.0);
   }
 }
 
