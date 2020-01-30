@@ -15,6 +15,8 @@ static void MX_USART1_UART_Init(void);
 int main(void)
 {
 	char ch[5] = {'j','o','b','s','\n'};
+	char s[25];
+	uint32_t reading;
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -23,14 +25,23 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+	MX_ADC_Init();
+	MX_ADC_Calib();
+	
+	HAL_ADC_Start(&hadc1);
 
   /* Infinite loop */
   while (1)
   {
-
 		HAL_Delay(100);
 		//HAL_UART_Transmit(&huart1, (uint8_t *)&ch[0], 5, 30000);
-		UART_Print_String(&huart1, ch, 5);
+		//UART_Print_String(&huart1, ch, 5);
+		
+		HAL_ADC_PollForConversion(&hadc1, 30000);					//Wait for conversion
+		reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
+		sprintf(s, "Temperature = %d\n", reading);				//Convert from int to string
+		
+		UART_Print_String(&huart1, s, 25);
   }
 }
 
@@ -81,7 +92,14 @@ void MX_ADC_Init(void) {
 
 }
 
-
+/* ADC Self-calibration */
+static void MX_ADC_Calib(void) {
+	
+	if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) != HAL_OK)   //Not sure if singled ended or diff endef
+	{
+		_Error_Handler(__FILE__, __LINE__);
+	}
+}
 
 void SystemClock_Config(void)
 {
