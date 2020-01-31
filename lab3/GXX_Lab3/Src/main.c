@@ -14,7 +14,7 @@ static void MX_USART1_UART_Init(void);
 
 int main(void)
 {
-	char ch[5] = {'j','o','b','s','\n'};
+	//char ch[5] = {'j','o','b','s','\n'};
 	char s[25];
 	uint32_t reading;
 
