@@ -64,7 +64,7 @@ int main(void)
 			
 			//Macro to compute temperature in Celsius degrees by passing Vref+ (in mV), ADC data and ADC resolution
 			//From MCU datasheet p. 39, Vref+ = 3.0 V (+- 10mV)
-			temp = __HAL_ADC_CALC_TEMPERATURE(3311, reading, ADC_RESOLUTION_12B);
+			temp = __HAL_ADC_CALC_TEMPERATURE(3311, reading, ADC_RESOLUTION_10B);
 			
 			sprintf(s, "Temperature = %d C\n", temp);				//Convert from int to string
 			int len = strlen(s);
@@ -90,7 +90,7 @@ void MX_ADC_Init(void) {
 	hadc1.Instance = ADC1;
 	
 	hadc1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
-	hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+	hadc1.Init.Resolution = ADC_RESOLUTION_10B;
 	hadc1.Init.ScanConvMode = DISABLE;
 	hadc1.Init.ContinuousConvMode = ENABLE;
 	hadc1.Init.DiscontinuousConvMode = DISABLE;
