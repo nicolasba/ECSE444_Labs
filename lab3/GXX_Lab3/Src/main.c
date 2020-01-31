@@ -1,5 +1,6 @@
 #include "main.h"
 #include "stm32l4xx_hal.h"
+#include <string.h>
 
 ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart1;
@@ -15,8 +16,10 @@ static void MX_USART1_UART_Init(void);
 int main(void)
 {
 	//char ch[5] = {'j','o','b','s','\n'};
-	char s[25];
+	char s[50];
 	uint32_t reading;
+	//uint32_t vref;
+	uint32_t temp;
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -25,23 +28,43 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+	
+	/* Initialize and calibrate ADC */
 	MX_ADC_Init();
 	MX_ADC_Calib();
 	
+	//Following the steps from the HAL drivers manual p. 104: start -> poll -> get value
 	HAL_ADC_Start(&hadc1);
+	
+	//int32_t cal2 = (int32_t) *TEMPSENSOR_CAL2_ADDR;
+	//int32_t cal1 = (int32_t) *TEMPSENSOR_CAL1_ADDR;
 
   /* Infinite loop */
   while (1)
   {
 		HAL_Delay(100);
 		//HAL_UART_Transmit(&huart1, (uint8_t *)&ch[0], 5, 30000);
-		//UART_Print_String(&huart1, ch, 5);
+		//UART_Print_String(&huart1, s, 25);
 		
 		HAL_ADC_PollForConversion(&hadc1, 30000);					//Wait for conversion
 		reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
-		sprintf(s, "Temperature = %d\n", reading);				//Convert from int to string
 		
-		UART_Print_String(&huart1, s, 25);
+		/**  
+		//To compute Analog reference voltage (Vref+), use following macro (ADC channel has to be changed from
+		//ADC_CHANNEL_TEMPSENSOR to ADC_CHANNEL_VREFINT in MX_ADC_Init(). FOUND THAT VREF = 3311 mV and not 3000 mV
+		vref = __LL_ADC_CALC_VREFANALOG_VOLTAGE(reading, ADC_RESOLUTION_12B);
+		sprintf(s, "vref = %d C\n", vref);				//Convert from int to string
+		int len = strlen(s);
+		UART_Print_String(&huart1, s, len);
+		*/
+		
+		//Macro to compute temperature in Celsius degrees by passing Vref+ (in mV), ADC data and ADC resolution
+		//From MCU datasheet p. 39, Vref+ = 3.0 V (+- 10mV)
+		temp = __HAL_ADC_CALC_TEMPERATURE(3311, reading, ADC_RESOLUTION_12B);
+		
+		sprintf(s, "Temperature = %d C\n", temp);				//Convert from int to string
+		int len = strlen(s);
+		UART_Print_String(&huart1, s, len);
   }
 }
 
