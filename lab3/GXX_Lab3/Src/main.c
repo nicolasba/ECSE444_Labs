@@ -40,7 +40,7 @@ int main(void)
 		HAL_ADC_PollForConversion(&hadc1, 30000);					//Wait for conversion
 		reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
 		sprintf(s, "Temperature = %d\n", reading);				//Convert from int to string
-		
+
 		UART_Print_String(&huart1, s, 25);
   }
 }
