@@ -6,6 +6,8 @@ ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_tx;
 
+int flag;
+
 int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len);
 void SystemClock_Config(void);
 static void MX_ADC_Init(void);
@@ -42,29 +44,32 @@ int main(void)
   /* Infinite loop */
   while (1)
   {
-		HAL_Delay(100);
+		//HAL_Delay(100);
 		//HAL_UART_Transmit(&huart1, (uint8_t *)&ch[0], 5, 30000);
 		//UART_Print_String(&huart1, s, 25);
-		
-		HAL_ADC_PollForConversion(&hadc1, 30000);					//Wait for conversion
-		reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
-		
-		/**  
-		//To compute Analog reference voltage (Vref+), use following macro (ADC channel has to be changed from
-		//ADC_CHANNEL_TEMPSENSOR to ADC_CHANNEL_VREFINT in MX_ADC_Init(). FOUND THAT VREF = 3311 mV and not 3000 mV
-		vref = __LL_ADC_CALC_VREFANALOG_VOLTAGE(reading, ADC_RESOLUTION_12B);
-		sprintf(s, "vref = %d C\n", vref);				//Convert from int to string
-		int len = strlen(s);
-		UART_Print_String(&huart1, s, len);
-		*/
-		
-		//Macro to compute temperature in Celsius degrees by passing Vref+ (in mV), ADC data and ADC resolution
-		//From MCU datasheet p. 39, Vref+ = 3.0 V (+- 10mV)
-		temp = __HAL_ADC_CALC_TEMPERATURE(3311, reading, ADC_RESOLUTION_12B);
-		
-		sprintf(s, "Temperature = %d C\n", temp);				//Convert from int to string
-		int len = strlen(s);
-		UART_Print_String(&huart1, s, len);
+		if(flag ==1)
+		{
+			flag =0;
+			HAL_ADC_PollForConversion(&hadc1, 30000);					//Wait for conversion
+			reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
+			
+			/**  
+			//To compute Analog reference voltage (Vref+), use following macro (ADC channel has to be changed from
+			//ADC_CHANNEL_TEMPSENSOR to ADC_CHANNEL_VREFINT in MX_ADC_Init(). FOUND THAT VREF = 3311 mV and not 3000 mV
+			vref = __LL_ADC_CALC_VREFANALOG_VOLTAGE(reading, ADC_RESOLUTION_12B);
+			sprintf(s, "vref = %d C\n", vref);				//Convert from int to string
+			int len = strlen(s);
+			UART_Print_String(&huart1, s, len);
+			*/
+			
+			//Macro to compute temperature in Celsius degrees by passing Vref+ (in mV), ADC data and ADC resolution
+			//From MCU datasheet p. 39, Vref+ = 3.0 V (+- 10mV)
+			temp = __HAL_ADC_CALC_TEMPERATURE(3311, reading, ADC_RESOLUTION_12B);
+			
+			sprintf(s, "Temperature = %d C\n", temp);				//Convert from int to string
+			int len = strlen(s);
+			UART_Print_String(&huart1, s, len);
+		}
   }
 }
 
@@ -187,7 +192,7 @@ void SystemClock_Config(void)
 
     /**Configure the Systick interrupt time 
     */
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/10);
 
     /**Configure the Systick 
     */
