@@ -7,6 +7,9 @@ UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_tx;
 
 int flag;
+int reading;
+	//uint32_t vref;
+int temp;
 
 int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len);
 void SystemClock_Config(void);
@@ -17,7 +20,7 @@ static void MX_USART1_UART_Init(void);
 
 int main(void)
 {
-	//char ch[5] = {'j','o','b','s','\n'};
+	char ch[5] = {'j','o','b','s','\n'};
 	char s[50];
 	uint32_t reading;
 	//uint32_t vref;
@@ -36,7 +39,7 @@ int main(void)
 	MX_ADC_Calib();
 	
 	//Following the steps from the HAL drivers manual p. 104: start -> poll -> get value
-	HAL_ADC_Start(&hadc1);
+	
 	
 	//int32_t cal2 = (int32_t) *TEMPSENSOR_CAL2_ADDR;
 	//int32_t cal1 = (int32_t) *TEMPSENSOR_CAL1_ADDR;
@@ -44,14 +47,25 @@ int main(void)
   /* Infinite loop */
   while (1)
   {
-		//HAL_Delay(100);
+		HAL_Delay(100);
 		//HAL_UART_Transmit(&huart1, (uint8_t *)&ch[0], 5, 30000);
-		//UART_Print_String(&huart1, s, 25);
-		if(flag ==1)
+		if(flag == 1)
 		{
 			flag =0;
-			HAL_ADC_PollForConversion(&hadc1, 30000);					//Wait for conversion
-			reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
+			HAL_ADC_Start(&hadc1);
+			if(HAL_ADC_PollForConversion(&hadc1, 30000)== HAL_OK)
+			{
+				reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
+				temp = __HAL_ADC_CALC_TEMPERATURE(3311, reading, ADC_RESOLUTION_10B);
+			
+				sprintf(s, "Temperature = %d C\n", temp);				//Convert from int to string
+				int len = strlen(s);
+				UART_Print_String(&huart1, s, len);
+			}	
+			HAL_ADC_Stop(&hadc1);
+		
+																									//Wait for conversion
+			//reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
 			
 			/**  
 			//To compute Analog reference voltage (Vref+), use following macro (ADC channel has to be changed from
@@ -61,14 +75,6 @@ int main(void)
 			int len = strlen(s);
 			UART_Print_String(&huart1, s, len);
 			*/
-			
-			//Macro to compute temperature in Celsius degrees by passing Vref+ (in mV), ADC data and ADC resolution
-			//From MCU datasheet p. 39, Vref+ = 3.0 V (+- 10mV)
-			temp = __HAL_ADC_CALC_TEMPERATURE(3311, reading, ADC_RESOLUTION_10B);
-			
-			sprintf(s, "Temperature = %d C\n", temp);				//Convert from int to string
-			int len = strlen(s);
-			UART_Print_String(&huart1, s, len);
 		}
   }
 }
@@ -89,17 +95,17 @@ void MX_ADC_Init(void) {
 	
 	hadc1.Instance = ADC1;
 	
-	hadc1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
+	hadc1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV1;
 	hadc1.Init.Resolution = ADC_RESOLUTION_10B;
 	hadc1.Init.ScanConvMode = DISABLE;
-	hadc1.Init.ContinuousConvMode = ENABLE;
+	hadc1.Init.ContinuousConvMode = DISABLE;
 	hadc1.Init.DiscontinuousConvMode = DISABLE;
 	hadc1.Init.NbrOfDiscConversion = 0;
 	hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
 	hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_CC1;
 	hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
 	hadc1.Init.NbrOfConversion = 1;
-	hadc1.Init.DMAContinuousRequests = ENABLE;
+	hadc1.Init.DMAContinuousRequests = DISABLE;
 	hadc1.Init.EOCSelection = DISABLE;
 	
 	if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -110,7 +116,7 @@ void MX_ADC_Init(void) {
 	chConfig.Channel = ADC_CHANNEL_TEMPSENSOR;				//From MCU datasheet p.36 and ref. manual p.580, temp. sensor is internally 
 																										//connected to channel 17. Only available on ADC1 and ADC3 instances
 	chConfig.Rank = 1;
-	chConfig.SamplingTime = ADC_SAMPLETIME_24CYCLES_5;
+	chConfig.SamplingTime = LL_ADC_SAMPLINGTIME_47CYCLES_5;
 	chConfig.Offset = 0;
 	
 	if (HAL_ADC_ConfigChannel(&hadc1, &chConfig) != HAL_OK)
@@ -123,7 +129,7 @@ void MX_ADC_Init(void) {
 /* ADC Self-calibration */
 static void MX_ADC_Calib(void) {
 	
-	if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) != HAL_OK)   //Not sure if singled ended or diff endef
+	if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) != HAL_OK)  
 	{
 		_Error_Handler(__FILE__, __LINE__);
 	}
@@ -192,7 +198,7 @@ void SystemClock_Config(void)
 
     /**Configure the Systick interrupt time 
     */
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/10);
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
     /**Configure the Systick 
     */
