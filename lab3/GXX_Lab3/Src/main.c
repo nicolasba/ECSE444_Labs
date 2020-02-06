@@ -5,6 +5,7 @@
 ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_tx;
+DMA_HandleTypeDef hdma_adc1;//MAYBE
 
 int flag;
 int reading;
@@ -12,11 +13,13 @@ int reading;
 int temp;
 
 int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len);
+int UART_Print_String_DMA(UART_HandleTypeDef *huart1, char *string, int len);
 void SystemClock_Config(void);
 static void MX_ADC_Init(void);
 static void MX_ADC_Calib(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_DMA_Init(void);
 
 int main(void)
 {
@@ -25,6 +28,9 @@ int main(void)
 	uint32_t reading;
 	//uint32_t vref;
 	uint32_t temp;
+	char temp_array[30];
+	int i =0;
+	char t[3];
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -33,6 +39,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+	//init dma
+	MX_DMA_Init();
 	
 	/* Initialize and calibrate ADC */
 	MX_ADC_Init();
@@ -57,10 +65,24 @@ int main(void)
 			{
 				reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
 				temp = __HAL_ADC_CALC_TEMPERATURE(3311, reading, ADC_RESOLUTION_10B);
-			
+				
+				/*
 				sprintf(s, "Temperature = %d C\n", temp);				//Convert from int to string
 				int len = strlen(s);
 				UART_Print_String(&huart1, s, len);
+				*/
+				if(i<30){
+					sprintf(t,"%d\n",temp/10);
+					temp_array[i]=t[i];
+					temp_array[i+1]=t[i+1];
+					temp_array[i+2]=t[i+2];
+					i+=3;
+				}
+				else{
+					i=0;
+					int len = 30;
+					UART_Print_String_DMA(&huart1, temp_array, len);
+				}
 			}	
 			HAL_ADC_Stop(&hadc1);
 		
@@ -85,6 +107,12 @@ int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len) {
 			return 1;	
 		return 0;
 }
+int UART_Print_String_DMA(UART_HandleTypeDef *huart1, char *string, int len) {
+		if(HAL_UART_Transmit_DMA(huart1,(uint8_t *)&string[0],len) == HAL_OK){
+			return 1;
+		}
+		return 0;
+}
 
 /* ADC init function (following configuration from Tutorial 4)*/
 void MX_ADC_Init(void) {
@@ -102,7 +130,7 @@ void MX_ADC_Init(void) {
 	hadc1.Init.DiscontinuousConvMode = DISABLE;
 	hadc1.Init.NbrOfDiscConversion = 0;
 	hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-	hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_CC1;
+	hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_CC1;//ADC_SOFTWARE_START
 	hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
 	hadc1.Init.NbrOfConversion = 1;
 	hadc1.Init.DMAContinuousRequests = DISABLE;
@@ -225,6 +253,41 @@ static void MX_USART1_UART_Init(void)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
+
+}
+
+/** 
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void) 
+{
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+  /* DMA1_Channel4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+	
+	//user code
+	/*
+			2. For a given Channel, program the required configuration through the following
+					parameters: Channel request, Transfer Direction, Source and Destination data
+					formats, Circular or Normal mode, Channel Priority level, Source and Destination
+					Increment mode using HAL_DMA_Init() function. Prior to HAL_DMA_Init the
+					peripheral clock shall be enabled for both DMA & DMAMUX thanks to:
+					a. DMA1 or DMA2: __HAL_RCC_DMA1_CLK_ENABLE() or
+					__HAL_RCC_DMA2_CLK_ENABLE() ;
+					b. DMAMUX1: __HAL_RCC_DMAMUX1_CLK_ENABLE();
+	
+	*/
+	hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+	hdma_usart1_tx.Init.Mode = DMA_NORMAL;
+	hdma_usart1_tx.Init.Priority = DMA_PRIORITY_MEDIUM;
+	__HAL_LINKDMA(&huart1,hdmatx,hdma_usart1_tx);
 
 }
 
