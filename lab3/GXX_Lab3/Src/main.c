@@ -31,7 +31,8 @@ int main(void)
 	char temp_array[30];
 	int i =0;
 	char t[3];
-
+	int len = 30;
+	
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
   /* Configure the system clock */
@@ -90,7 +91,7 @@ int main(void)
 				}
 				else{
 					i=0;
-					int len = 30;
+
 					//UART_Print_String_DMA(&huart1, temp_array, len);
 					HAL_UART_Transmit_DMA(&huart1,(uint8_t *) &temp_array,len);
 				}
@@ -317,19 +318,19 @@ static void MX_DMA_Init(void)
 					b. DMAMUX1: __HAL_RCC_DMAMUX1_CLK_ENABLE();
 	
 	*/
-	
+	hdma_usart1_tx.Instance = DMA1_Channel4;
+	hdma_usart1_tx.Init.Request = DMA_REQUEST_2;
 	hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
-	hdma_usart1_tx.Init.Mode = DMA_NORMAL;//NORMAL???
-	hdma_usart1_tx.Init.Priority = DMA_PRIORITY_LOW;
-	hdma_usart1_tx.Init.MemInc= DMA_MINC_ENABLE;
-	hdma_usart1_tx.Init.PeriphDataAlignment=DMA_PDATAALIGN_BYTE;
-	hdma_usart1_tx.Init.MemDataAlignment=DMA_MDATAALIGN_BYTE;
-	hdma_usart1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
-	
-	if(HAL_DMA_Init(&hdma_usart1_tx)!=HAL_OK)
+	hdma_usart1_tx.Init.Mode = DMA_NORMAL;
+	hdma_usart1_tx.Init.Priority = DMA_PRIORITY_MEDIUM;
+	hdma_usart1_tx.Init.MemInc = DMA_MINC_ENABLE;
+	hdma_usart1_tx.Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
+	//hdma_usart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+
+	if (HAL_DMA_Init(&hdma_usart1_tx) != HAL_OK) 
 	{
     _Error_Handler(__FILE__, __LINE__);
-  }	
+  }
 	
 	__HAL_LINKDMA(&huart1,hdmatx,hdma_usart1_tx);
 	
