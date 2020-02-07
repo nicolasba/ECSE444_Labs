@@ -1,13 +1,16 @@
 #include "main.h"
 #include "stm32l4xx_hal.h"
 #include <string.h>
+#include "stm32l4xx_it.h"
 
 ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_tx;
-DMA_HandleTypeDef hdma_adc1;//MAYBE
 
 int flag;
+int reading;
+	//uint32_t vref;
+int temp;
 
 int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len);
 int UART_Print_String_DMA(UART_HandleTypeDef *huart1, char *string, int len);
@@ -48,16 +51,25 @@ int main(void)
 	
 	//int32_t cal2 = (int32_t) *TEMPSENSOR_CAL2_ADDR;
 	//int32_t cal1 = (int32_t) *TEMPSENSOR_CAL1_ADDR;
-
+	
+	/*
+	*Already done when calling transmit
+	uint32_t srcAddress =(uint32_t ) &temp_array;
+	uint32_t dstAddress = (uint32_t) &(GPIOC->ODR);
+	HAL_DMA_Start_IT(&hdma_usart1_tx,srcAddress, dstAddress,30); //DATA LENGTH WRONG
+	*/
+	
   /* Infinite loop */
   while (1)
   {
 		//HAL_Delay(100);
 		//HAL_UART_Transmit(&huart1, (uint8_t *)&ch[0], 5, 30000);
+		
 		if(flag == 1)
 		{
 			flag =0;
 			HAL_ADC_Start(&hadc1);
+			
 			if(HAL_ADC_PollForConversion(&hadc1, 30000)== HAL_OK)
 			{
 				reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
@@ -68,21 +80,26 @@ int main(void)
 				int len = strlen(s);
 				UART_Print_String(&huart1, s, len);
 				*/
+				
 				if(i<30){
-					sprintf(t,"%d\n",temp/10);
-					temp_array[i]=t[i];
-					temp_array[i+1]=t[i+1];
-					temp_array[i+2]=t[i+2];
+					sprintf(t,"%d\n",temp);
+					temp_array[i]=t[0];
+					temp_array[i+1]=t[1];
+					temp_array[i+2]=t[2];
 					i+=3;
 				}
 				else{
 					i=0;
 					int len = 30;
-					UART_Print_String_DMA(&huart1, temp_array, len);
+					//UART_Print_String_DMA(&huart1, temp_array, len);
+					HAL_UART_Transmit_DMA(&huart1,(uint8_t *) &temp_array,len);
 				}
 			}	
 			HAL_ADC_Stop(&hadc1);
 		
+																									//Wait for conversion
+			//reading = HAL_ADC_GetValue(&hadc1);								//Get current temperature
+			
 			/**  
 			//To compute Analog reference voltage (Vref+), use following macro (ADC channel has to be changed from
 			//ADC_CHANNEL_TEMPSENSOR to ADC_CHANNEL_VREFINT in MX_ADC_Init(). FOUND THAT VREF = 3311 mV and not 3000 mV
@@ -103,6 +120,7 @@ int UART_Print_String(UART_HandleTypeDef *huart1, char *string, int len) {
 }
 int UART_Print_String_DMA(UART_HandleTypeDef *huart1, char *string, int len) {
 		if(HAL_UART_Transmit_DMA(huart1,(uint8_t *)&string[0],len) == HAL_OK){
+			
 			return 1;
 		}
 		return 0;
@@ -127,7 +145,7 @@ void MX_ADC_Init(void) {
 	hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_CC1;//ADC_SOFTWARE_START
 	hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
 	hadc1.Init.NbrOfConversion = 1;
-	hadc1.Init.DMAContinuousRequests = DISABLE;
+	//hadc1.Init.DMAContinuousRequests = ENABLE;
 	hadc1.Init.EOCSelection = DISABLE;
 	
 	if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -220,7 +238,7 @@ void SystemClock_Config(void)
 
     /**Configure the Systick interrupt time 
     */
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/80);
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/10);
 
     /**Configure the Systick 
     */
@@ -233,6 +251,9 @@ void SystemClock_Config(void)
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
+	
+	__USART1_CLK_ENABLE();//TEST
+	
   huart1.Instance = USART1;
   huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
@@ -244,13 +265,34 @@ static void MX_USART1_UART_Init(void)
   huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 	
-  if (HAL_UART_Init(&huart1) != HAL_OK)
+	/*
+	  *          This parameter can be one of the following values:
+  *            @arg @ref UART_IT_RXFF  RXFIFO Full interrupt
+  *            @arg @ref UART_IT_TXFE  TXFIFO Empty interrupt
+  *            @arg @ref UART_IT_RXFT  RXFIFO threshold interrupt
+  *            @arg @ref UART_IT_TXFT  TXFIFO threshold interrupt
+  *            @arg @ref UART_IT_WUF   Wakeup from stop mode interrupt
+  *            @arg @ref UART_IT_CM    Character match interrupt
+  *            @arg @ref UART_IT_CTS   CTS change interrupt
+  *            @arg @ref UART_IT_LBD   LIN Break detection interrupt
+  *            @arg @ref UART_IT_TXE   Transmit Data Register empty interrupt
+  *            @arg @ref UART_IT_TXFNF TX FIFO not full interrupt
+  *            @arg @ref UART_IT_TC    Transmission complete interrupt
+  *            @arg @ref UART_IT_RXNE  Receive Data register not empty interrupt
+  *            @arg @ref UART_IT_RXFNE RXFIFO not empty interrupt
+  *            @arg @ref UART_IT_IDLE  Idle line detection interrupt
+  *            @arg @ref UART_IT_PE    Parity Error interrupt
+  *            @arg @ref UART_IT_ERR   Error interrupt (Frame error, noise error, overrun error)
+	*/
+	//__HAL_UART_ENABLE_IT(&huart1,UART_IT_TC);
+	  if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
 	
 	HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(USART1_IRQn);
+	HAL_NVIC_EnableIRQ(USART1_IRQn);
+
 }
 
 /** 
@@ -261,14 +303,8 @@ static void MX_DMA_Init(void)
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
 
-  /* DMA interrupt init */
-  /* DMA1_Channel1_IRQn interrupt configuration */
-  //HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
-  //HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-  /* DMA1_Channel4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
-		
+
+	
 	//user code
 	/*
 			2. For a given Channel, program the required configuration through the following
@@ -282,22 +318,28 @@ static void MX_DMA_Init(void)
 	
 	*/
 	
-	hdma_usart1_tx.Instance = DMA1_Channel4;
-	hdma_usart1_tx.Init.Request = DMA_REQUEST_2;
 	hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
-	hdma_usart1_tx.Init.Mode = DMA_NORMAL;
-	hdma_usart1_tx.Init.Priority = DMA_PRIORITY_MEDIUM;
-	hdma_usart1_tx.Init.MemInc = DMA_MINC_ENABLE;
-	hdma_usart1_tx.Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
-	//hdma_usart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+	hdma_usart1_tx.Init.Mode = DMA_NORMAL;//NORMAL???
+	hdma_usart1_tx.Init.Priority = DMA_PRIORITY_LOW;
+	hdma_usart1_tx.Init.MemInc= DMA_MINC_ENABLE;
+	hdma_usart1_tx.Init.PeriphDataAlignment=DMA_PDATAALIGN_BYTE;
+	hdma_usart1_tx.Init.MemDataAlignment=DMA_MDATAALIGN_BYTE;
+	hdma_usart1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
 	
-	if (HAL_DMA_Init(&hdma_usart1_tx) != HAL_OK) 
+	if(HAL_DMA_Init(&hdma_usart1_tx)!=HAL_OK)
 	{
     _Error_Handler(__FILE__, __LINE__);
-  }
+  }	
 	
 	__HAL_LINKDMA(&huart1,hdmatx,hdma_usart1_tx);
+	
+	/* DMA interrupt init */
+  /* DMA1_Channel4_IRQn interrupt configuration *///USART
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+	
 
+	
 }
 
 static void MX_GPIO_Init(void)
